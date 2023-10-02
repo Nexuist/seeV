@@ -33,6 +33,13 @@ $ seev input.jpg -o foreground.png
 
 Extracts the subject from `input.jpg` and writes the result to `foreground.png`.
 
+```bash
+
+$ seev input.jpg --stdout
+```
+
+Extracts the subject from `input.jpg` and writes the result to stdout.
+
 ## Next Steps
 
 * Determine which Vision.framework features to support next (face detection, OCR, etc)
