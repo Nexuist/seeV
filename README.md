@@ -10,7 +10,7 @@ Currently seeV supports subject extraction (i.e. background removal). On a 2020 
 
 ### Release
 
-TODO
+You can download the latest M1 build from the [Releases]( https://github.com/Nexuist/seeV/releases) page.
 
 ### Build from Source
 
