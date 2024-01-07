@@ -6,7 +6,7 @@ import VideoToolbox
 import Vision
 
 @available(macOS 14.0, *)
-func extractSubject(inputImagePath: String) throws -> CGImage {
+func extractSubject(inputImagePath: String, cropped: Bool) throws -> CGImage {
   let inputURL = URL(fileURLWithPath: inputImagePath)
   let request = VNGenerateForegroundInstanceMaskRequest()
   let handler = VNImageRequestHandler(url: inputURL)
@@ -16,7 +16,7 @@ func extractSubject(inputImagePath: String) throws -> CGImage {
   }
   // This returns a CVPixelBuffer
   let maskBuffer = try result.generateMaskedImage(
-    ofInstances: result.allInstances, from: handler, croppedToInstancesExtent: false
+    ofInstances: result.allInstances, from: handler, croppedToInstancesExtent: cropped
   )
   var output: CGImage?
   let conversionCode = VTCreateCGImageFromCVPixelBuffer(maskBuffer, options: nil, imageOut: &output)

@@ -43,7 +43,6 @@ Extracts the subject from `input.jpg` and writes the result to stdout.
 ## Next Steps
 
 * Determine which Vision.framework features to support next (face detection, OCR, etc)
-* Add a flag to determine if the output should keep the input dimensions or crop them to the subject's extent
 
 ## License
 

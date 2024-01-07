@@ -7,6 +7,9 @@ struct Options: ParsableArguments {
   @Option(name: [.customShort("o"), .long], help: "The filepath of the output image")
   var output = "output.png"
 
+  @Flag(name: [.customShort("c"), .long], help: "Crop the output to the subject's bounding box")
+  var cropped: Bool = false
+
   @Flag(name: [.long], help: "Write output to stdout")
   var stdout: Bool = false
 }
@@ -22,7 +25,7 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.0.1",
+    version: "1.0.2",
     subcommands: [Subject.self],
     defaultSubcommand: Subject.self
   )
@@ -37,7 +40,7 @@ struct seev: ParsableCommand {
     mutating func run() {
       do {
         print("Removing background from \(args.input)...")
-        let output = try extractSubject(inputImagePath: args.input)
+        let output = try extractSubject(inputImagePath: args.input, cropped: args.cropped)
         if args.stdout {
           try writeOutput(output: output)
         } else {
