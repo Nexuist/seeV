@@ -27,8 +27,8 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.1.1",
-    subcommands: [Subject.self, Faces.self],
+    version: "1.2.0",
+    subcommands: [Subject.self, Faces.self, Humans.self],
     defaultSubcommand: Subject.self
   )
 
@@ -92,6 +92,48 @@ struct seev: ParsableCommand {
             inputImagePath: args.input,
             outputImagePath: args.output,
             boxes: faces.map(\.boundingBox))
+          print("Saved bounding boxes to \(args.output)")
+        }
+      } catch {
+        print("Error: \(error)")
+      }
+    }
+  }
+
+  struct Humans: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      abstract: "Detects humans in an image and returns the results as JSON.",
+      discussion:
+        "The JSON output includes the bounding box and confidence of each human. If an output path is provided, a PNG image with the bounding boxes drawn will be saved."
+    )
+
+    @OptionGroup() var args: Options
+
+    mutating func run() {
+      do {
+        let humans = try extractHumans(inputImagePath: args.input)
+        let humanDict: [String: Any] = [
+          "input": args.input,
+          "humans": humans.map { human in
+            return [
+              "boundingBox": [
+                "x": human.boundingBox.origin.x,
+                "y": human.boundingBox.origin.y,
+                "width": human.boundingBox.width,
+                "height": human.boundingBox.height,
+              ],
+              "confidence": human.confidence,
+            ] as [String: Any]
+          },
+        ]
+        let jsonData = try JSONSerialization.data(
+          withJSONObject: humanDict, options: .prettyPrinted)
+        print(String(data: jsonData, encoding: .utf8)!)
+        if !args.stdout {
+          writeBoundingBoxes(
+            inputImagePath: args.input,
+            outputImagePath: args.output,
+            boxes: humans.map(\.boundingBox))
           print("Saved bounding boxes to \(args.output)")
         }
       } catch {

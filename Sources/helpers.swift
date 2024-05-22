@@ -36,10 +36,21 @@ func extractSubject(inputImagePath: String, cropped: Bool) throws -> CGImage {
 }
 
 /// Detect faces in the input image and return the results as an array of VNFaceObservation
-@available(macOS 13.0, *)
 func extractFaces(inputImagePath: String) throws -> [VNFaceObservation] {
   let inputURL = inputImagePathToURL(inputImagePath)
   let request = VNDetectFaceRectanglesRequest()
+  let handler = VNImageRequestHandler(url: inputURL)
+  try handler.perform([request])
+  guard let result = request.results else {
+    return []
+  }
+  return result
+}
+
+@available(macOS 12.0, *)
+func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let request = VNDetectHumanRectanglesRequest()
   let handler = VNImageRequestHandler(url: inputURL)
   try handler.perform([request])
   guard let result = request.results else {
