@@ -59,6 +59,23 @@ func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
   return result
 }
 
+@available(macOS 10.15, *)
+func extractText(inputImagePath: String, customWords: [String]? = []) throws
+  -> [VNRecognizedTextObservation]
+{
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let request = VNRecognizeTextRequest()
+  request.recognitionLevel = .accurate
+  request.usesLanguageCorrection = true
+  request.customWords = []
+  let handler = VNImageRequestHandler(url: inputURL)
+  try handler.perform([request])
+  guard let result = request.results else {
+    return []
+  }
+  return result
+}
+
 /// Draw bounding boxes into the image and save it to disk
 @available(macOS 11.0, *)
 func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: [CGRect]) {

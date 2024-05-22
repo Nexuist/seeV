@@ -27,14 +27,16 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.2.0",
-    subcommands: [Subject.self, Faces.self, Humans.self],
+    version: "1.3.0",
+    subcommands: [Subject.self, Faces.self, Humans.self, Text.self],
     defaultSubcommand: Subject.self
   )
 
   struct Subject: ParsableCommand {
     static var configuration = CommandConfiguration(
-      abstract: "Removes the background from an image."
+      abstract: "Removes the background from an image.",
+      discussion:
+        "The output image will have the background removed. If the --cropped flag is provided, the output will be cropped to the subject's bounding box. If the --stdout flag is provided, the output will be written to stdout."
     )
 
     @OptionGroup() var args: Options
@@ -134,6 +136,55 @@ struct seev: ParsableCommand {
             inputImagePath: args.input,
             outputImagePath: args.output,
             boxes: humans.map(\.boundingBox))
+          print("Saved bounding boxes to \(args.output)")
+        }
+      } catch {
+        print("Error: \(error)")
+      }
+    }
+  }
+
+  struct Text: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      abstract: "Detects text in an image and returns the results as JSON.",
+      discussion:
+        "The JSON output includes the bounding box, text, and confidence of each detected text. If an output path is provided, a PNG image with the bounding boxes drawn will be saved."
+    )
+
+    @OptionGroup() var args: Options
+    @Option(
+      name: [.customLong("custom-words")],
+      parsing: .upToNextOption,
+      help: "Custom words to use for text recognition")
+    var customWords: [String] = []
+
+    mutating func run() {
+      do {
+        let text = try extractText(inputImagePath: args.input, customWords: customWords)
+        let textDict: [String: Any] = [
+          "input": args.input,
+          "customWords": customWords,
+          "text": text.map { text in
+            return [
+              "boundingBox": [
+                "x": text.boundingBox.origin.x,
+                "y": text.boundingBox.origin.y,
+                "width": text.boundingBox.width,
+                "height": text.boundingBox.height,
+              ],
+              "text": text.topCandidates(1).first?.string ?? "Failed to recognize text",
+              "confidence": text.confidence,
+            ] as [String: Any]
+          },
+        ]
+        let jsonData = try JSONSerialization.data(
+          withJSONObject: textDict, options: .prettyPrinted)
+        print(String(data: jsonData, encoding: .utf8)!)
+        if !args.stdout {
+          writeBoundingBoxes(
+            inputImagePath: args.input,
+            outputImagePath: args.output,
+            boxes: text.map(\.boundingBox))
           print("Saved bounding boxes to \(args.output)")
         }
       } catch {
