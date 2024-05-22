@@ -40,6 +40,14 @@ $ seev input.jpg --stdout
 
 Extracts the subject from `input.jpg` and writes the result to stdout.
 
+## Development
+
+```sh
+swift run seev <arguments>
+```
+
+* Don't forget to increment the version number in `seev.swift`
+
 ## Next Steps
 
 * Determine which Vision.framework features to support next (face detection, OCR, etc)
