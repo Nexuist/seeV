@@ -6,17 +6,12 @@ struct Options: ParsableArguments {
   var input: String
 
   @Option(name: [.customShort("o"), .long], help: "The filepath of the output image")
-  var output = "output.png"
-
-  @Flag(name: [.customShort("c"), .long], help: "Crop the output to the subject's bounding box")
-  var cropped: Bool = false
-
-  @Flag(name: [.long], help: "Write output to stdout")
-  var stdout: Bool = false
+  var output: String?
 }
 
 enum SeeVError: Error {
   case noSubjectFound
+  case noFeaturePrintFound
   case invalidCVPixelBuffer(Int32)
   case outputError
   case invalidURL
@@ -27,8 +22,15 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.3.0",
-    subcommands: [Subject.self, Faces.self, Humans.self, Text.self],
+    version: "1.5.0",
+    subcommands: [
+      Subject.self,
+      Faces.self,
+      Humans.self,
+      Text.self,
+      Embedding.self,
+      Distance.self,
+    ],
     defaultSubcommand: Subject.self
   )
 
@@ -40,16 +42,21 @@ struct seev: ParsableCommand {
     )
 
     @OptionGroup() var args: Options
+    @Flag(name: [.customShort("c"), .long], help: "Crop the output to the subject's bounding box")
+    var cropped: Bool = false
+
+    @Flag(name: [.long], help: "Write output to stdout")
+    var stdout: Bool = false
 
     mutating func run() {
       do {
         print("Removing background from \(args.input)...")
-        let output = try extractSubject(inputImagePath: args.input, cropped: args.cropped)
-        if args.stdout {
+        let output = try extractSubject(inputImagePath: args.input, cropped: cropped)
+        if args.output == nil {
           try writeOutput(output: output)
         } else {
-          saveOutput(output: output, outputImagePath: args.output)
-          print("Saved to \(args.output)")
+          saveOutput(output: output, outputImagePath: args.output!)
+          print("Saved to \(args.output!)")
         }
       } catch {
         print("Error: \(error)")
@@ -89,12 +96,12 @@ struct seev: ParsableCommand {
         ]
         let jsonData = try JSONSerialization.data(withJSONObject: faceDict, options: .prettyPrinted)
         print(String(data: jsonData, encoding: .utf8)!)
-        if !args.stdout {
+        if args.output != nil {
           writeBoundingBoxes(
             inputImagePath: args.input,
-            outputImagePath: args.output,
+            outputImagePath: args.output!,
             boxes: faces.map(\.boundingBox))
-          print("Saved bounding boxes to \(args.output)")
+          print("Saved bounding boxes to \(args.output!)")
         }
       } catch {
         print("Error: \(error)")
@@ -131,12 +138,12 @@ struct seev: ParsableCommand {
         let jsonData = try JSONSerialization.data(
           withJSONObject: humanDict, options: .prettyPrinted)
         print(String(data: jsonData, encoding: .utf8)!)
-        if !args.stdout {
+        if args.output != nil {
           writeBoundingBoxes(
             inputImagePath: args.input,
-            outputImagePath: args.output,
+            outputImagePath: args.output!,
             boxes: humans.map(\.boundingBox))
-          print("Saved bounding boxes to \(args.output)")
+          print("Saved bounding boxes to \(args.output!)")
         }
       } catch {
         print("Error: \(error)")
@@ -180,13 +187,66 @@ struct seev: ParsableCommand {
         let jsonData = try JSONSerialization.data(
           withJSONObject: textDict, options: .prettyPrinted)
         print(String(data: jsonData, encoding: .utf8)!)
-        if !args.stdout {
+        if args.output != nil {
           writeBoundingBoxes(
             inputImagePath: args.input,
-            outputImagePath: args.output,
+            outputImagePath: args.output!,
             boxes: text.map(\.boundingBox))
-          print("Saved bounding boxes to \(args.output)")
+          print("Saved bounding boxes to \(args.output!)")
         }
+      } catch {
+        print("Error: \(error)")
+      }
+    }
+  }
+
+  struct Embedding: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      abstract: "Extracts embeddings from an image and returns the results as JSON."
+    )
+
+    @OptionGroup() var args: Options
+
+    mutating func run() {
+      do {
+        let embedding = try inferFeaturePrint(inputImagePath: args.input)
+        let embeddingDict: [String: Any] = [
+          "input": args.input,
+          "embedding": embedding,
+        ]
+        let jsonData = try JSONSerialization.data(
+          withJSONObject: embeddingDict, options: .prettyPrinted)
+        print(String(data: jsonData, encoding: .utf8)!)
+      } catch {
+        print("Error: \(error)")
+      }
+    }
+  }
+
+  struct Distance: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      abstract:
+        "Calculates embeddings for the input and output images and the distance between them."
+    )
+
+    @OptionGroup() var args: Options
+
+    mutating func run() {
+      do {
+        let embedding1 = try inferFeaturePrint(inputImagePath: args.input)
+        guard args.output != nil else {
+          throw SeeVError.noFeaturePrintFound
+        }
+        let embedding2 = try inferFeaturePrint(inputImagePath: args.output!)
+        // Calculate cosine similarity
+        let distanceDict: [String: Any] = [
+          "A": args.input,
+          "B": args.output!,
+          "distance": cosineSimilarity(embedding1, embedding2),
+        ]
+        let jsonData = try JSONSerialization.data(
+          withJSONObject: distanceDict, options: .prettyPrinted)
+        print(String(data: jsonData, encoding: .utf8)!)
       } catch {
         print("Error: \(error)")
       }

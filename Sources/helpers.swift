@@ -78,6 +78,28 @@ func extractText(inputImagePath: String, customWords: [String]? = []) throws
   return result
 }
 
+/// Infer a feature print from the input image and return a float array
+@available(macOS 10.15, *)
+func inferFeaturePrint(inputImagePath: String) throws -> [Float] {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let request = VNGenerateImageFeaturePrintRequest()
+  let handler = VNImageRequestHandler(url: inputURL)
+  try handler.perform([request])
+  guard let result = request.results?.first as? VNFeaturePrintObservation else {
+    throw SeeVError.noFeaturePrintFound
+  }
+  return result.data.withUnsafeBytes {
+    Array($0.bindMemory(to: Float.self))
+  }
+}
+
+func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
+  let dotProduct = zip(a, b).map(*).reduce(0, +)
+  let magnitudeA = sqrt(a.map { $0 * $0 }.reduce(0, +))
+  let magnitudeB = sqrt(b.map { $0 * $0 }.reduce(0, +))
+  return dotProduct / (magnitudeA * magnitudeB)
+}
+
 /// Draw bounding boxes into the image and save it to disk
 @available(macOS 11.0, *)
 func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: [CGRect]) {
