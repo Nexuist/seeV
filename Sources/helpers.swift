@@ -100,6 +100,22 @@ func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
   return dotProduct / (magnitudeA * magnitudeB)
 }
 
+/// Crop the input image using the specified bounding box and return the result as a CGImage
+func cropImage(inputImagePath: String, boundingBox: CGRect) throws -> CGImage {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let inputImage = CIImage(contentsOf: inputURL)!
+  let adjustedBoundingBox = CGRect(
+    x: boundingBox.origin.x * inputImage.extent.width,
+    y: boundingBox.origin.y * inputImage.extent.height,
+    width: boundingBox.width * inputImage.extent.width,
+    height: boundingBox.height * inputImage.extent.height
+  )
+  let croppedImage = inputImage.cropped(to: adjustedBoundingBox)
+  let context = CIContext(options: nil)
+  let cgImage = context.createCGImage(croppedImage, from: croppedImage.extent)!
+  return cgImage
+}
+
 /// Draw bounding boxes into the image and save it to disk
 @available(macOS 11.0, *)
 func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: [CGRect]) {

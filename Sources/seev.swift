@@ -22,7 +22,7 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.5.0",
+    version: "1.5.1",
     subcommands: [
       Subject.self,
       Faces.self,
@@ -69,10 +69,13 @@ struct seev: ParsableCommand {
       abstract: "Detects faces in an image and returns the results as JSON.",
       discussion:
         "The JSON output includes the roll, yaw, pitch, bounding box, and confidence of each face. If an output path is provided, a PNG image with the bounding boxes drawn will be saved."
-
     )
 
     @OptionGroup() var args: Options
+    @Flag(
+      name: [.customShort("c"), .long],
+      help: "Crop the output to the largest face bounding box found")
+    var cropped: Bool = false
 
     mutating func run() {
       do {
@@ -96,7 +99,20 @@ struct seev: ParsableCommand {
         ]
         let jsonData = try JSONSerialization.data(withJSONObject: faceDict, options: .prettyPrinted)
         print(String(data: jsonData, encoding: .utf8)!)
-        if args.output != nil {
+        if cropped {
+          let largestFace = faces.max {
+            $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width
+              * $1.boundingBox.height
+          }
+          if largestFace != nil {
+            let output = try cropImage(
+              inputImagePath: args.input, boundingBox: largestFace!.boundingBox)
+            saveOutput(output: output, outputImagePath: args.output!)
+            print("Saved cropped image to \(args.output!)")
+          } else {
+            throw SeeVError.noSubjectFound
+          }
+        } else if args.output != nil {
           writeBoundingBoxes(
             inputImagePath: args.input,
             outputImagePath: args.output!,
