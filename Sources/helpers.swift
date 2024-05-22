@@ -20,7 +20,7 @@ func extractSubject(inputImagePath: String, cropped: Bool) throws -> CGImage {
   let request = VNGenerateForegroundInstanceMaskRequest()
   let handler = VNImageRequestHandler(url: inputURL)
   try handler.perform([request])
-  guard let result = request.results?.first else {
+  guard let result: VNInstanceMaskObservation = request.results?.first else {
     throw SeeVError.noSubjectFound
   }
   // This returns a CVPixelBuffer
@@ -47,6 +47,7 @@ func extractFaces(inputImagePath: String) throws -> [VNFaceObservation] {
   return result
 }
 
+/// Detect humans in the input image and return the results as an array of VNHumanObservation
 @available(macOS 12.0, *)
 func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
   let inputURL = inputImagePathToURL(inputImagePath)
@@ -59,6 +60,7 @@ func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
   return result
 }
 
+/// Extract text from the input image and return the results as an array of VNRecognizedTextObservation
 @available(macOS 10.15, *)
 func extractText(inputImagePath: String, customWords: [String]? = []) throws
   -> [VNRecognizedTextObservation]
