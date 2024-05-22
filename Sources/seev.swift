@@ -88,7 +88,10 @@ struct seev: ParsableCommand {
         let jsonData = try JSONSerialization.data(withJSONObject: faceDict, options: .prettyPrinted)
         print(String(data: jsonData, encoding: .utf8)!)
         if !args.stdout {
-          writeBoundingBoxes(inputImagePath: args.input, outputImagePath: args.output, faces: faces)
+          writeBoundingBoxes(
+            inputImagePath: args.input,
+            outputImagePath: args.output,
+            boxes: faces.map(\.boundingBox))
           print("Saved bounding boxes to \(args.output)")
         }
       } catch {

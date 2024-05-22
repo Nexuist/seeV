@@ -48,30 +48,29 @@ func extractFaces(inputImagePath: String) throws -> [VNFaceObservation] {
   return result
 }
 
-/// Write bounding boxes around the detected faces in the input image
+/// Draw bounding boxes into the image and save it to disk
 @available(macOS 11.0, *)
-func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, faces: [VNFaceObservation])
-{
-  // let inputURL = URL(fileURLWithPath: inputImagePath)
-  // let inputImage = CIImage(contentsOf: inputURL)
-  // let context = CIContext()
-  // let graphics = NSGraphicsContext()
-  // for face in faces {
-  //   let boundingBox = face.boundingBox
-  //   let rect = CGRect(
-  //     x: boundingBox.origin.x * inputImage.extent.width,
-  //     y: (1 - boundingBox.origin.y - boundingBox.height) * inputImage.extent.height,
-  //     width: boundingBox.width * inputImage.extent.width,
-  //     height: boundingBox.height * inputImage.extent.height
-  //   )
-  //   let path = NSBezierPath(rect: rect)
-  //   path.lineWidth = 5.0
-  //   NSColor.red.setStroke()
-  //   path.stroke()
-  // }
-  // graphics.flushGraphics()
-  // let output = context.createCGImage(inputImage, from: inputImage.extent)!
-  // saveOutput(output: output, outputImagePath: outputImagePath)
+func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: [CGRect]) {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let inputImage = CIImage(contentsOf: inputURL)!
+  let nsImage = NSImage(size: inputImage.extent.size, flipped: false) { _ in
+    inputImage.draw(at: .zero, from: inputImage.extent, operation: .copy, fraction: 1.0)
+    for box in boxes {
+      let rect = CGRect(
+        x: box.origin.x * inputImage.extent.width,
+        y: box.origin.y * inputImage.extent.height,
+        width: box.width * inputImage.extent.width,
+        height: box.height * inputImage.extent.height
+      )
+      let path = NSBezierPath(rect: rect)
+      path.lineWidth = 2.0
+      NSColor.red.setStroke()
+      path.stroke()
+    }
+    return true
+  }
+  let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+  saveOutput(output: cgImage, outputImagePath: outputImagePath)
 }
 
 /// Save the output image to the specified path
