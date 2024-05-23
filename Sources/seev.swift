@@ -22,13 +22,13 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.5.1",
+    version: "1.5.2",
     subcommands: [
       Subject.self,
       Faces.self,
       Humans.self,
       Text.self,
-      Embedding.self,
+      Embeddings.self,
       Distance.self,
     ],
     defaultSubcommand: Subject.self
@@ -216,7 +216,7 @@ struct seev: ParsableCommand {
     }
   }
 
-  struct Embedding: ParsableCommand {
+  struct Embeddings: ParsableCommand {
     static var configuration = CommandConfiguration(
       abstract: "Extracts embeddings from an image and returns the results as JSON."
     )
@@ -258,7 +258,7 @@ struct seev: ParsableCommand {
         let distanceDict: [String: Any] = [
           "A": args.input,
           "B": args.output!,
-          "distance": cosineSimilarity(embedding1, embedding2),
+          "distance": 1 - cosineSimilarity(embedding1, embedding2),
         ]
         let jsonData = try JSONSerialization.data(
           withJSONObject: distanceDict, options: .prettyPrinted)

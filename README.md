@@ -4,7 +4,85 @@ seeV is a macOS command line wrapper around the [Apple Vision framework](https:/
 
 Because Vision.framework ships on macOS, seeV does not require any additional dependencies or network access. It is a single executable that can be copied to any location on your system.
 
-Currently seeV supports subject extraction (i.e. background removal). On a 2020 M1 MacBook Air subject extraction completes in under one second. More features will be added in the future.
+## Supported Operations
+
+### Subject Extraction
+
+![Subject demo](assets/demos/subject.png)
+
+```sh
+seev input.jpg -o output.png
+```
+
+* On a 2020 M1 MacBook Air subject extraction completes in under one second
+* Image can be output to a specified file or stdout
+
+### Face Detection
+
+![Face demo](assets/demos/faces.png)
+
+```sh
+seev faces input.jpg -o output.png
+```
+
+* Results are output in JSON and include the bounding box of each detected face
+* Red bounding boxes can be drawn around each face
+* Output can be cropped to just the face
+
+### Human Detection
+
+![Human demo](assets/demos/humans.png)
+
+```sh
+seev humans input.jpg -o output.png
+```
+
+* Results are output in JSON and include the bounding box of each detected human
+* Only the upper body needs to be visible for detection (does not require full body)
+* Red bounding boxes can be drawn around each human
+
+### Text Detection (OCR)
+
+![Text demo](assets/demos/text.png)
+
+```sh
+seev text input.jpg -o output.png
+```
+
+* Results are output in JSON and include the bounding box of each detected phrase
+* Red bounding boxes can be drawn around each phrase
+* Custom words to identify can be provided as a command line argument
+
+### Embeddings
+
+![Embeddings demo](assets/demos/embeddings.png)
+
+```sh
+seev embeddings input.jpg
+```
+
+
+
+```sh
+seev distance input.jpg -o comparison.png
+```
+
+* Embeddings are provided as a JSON object and include an array of floating point numbers
+  * See [example](assets/embeddings/steve.json)
+* Embeddings can be used to quantitatively assess image similarity
+
+### Image Distance
+
+![Distance demo](assets/demos/distance.png)
+
+```sh
+seev distance input.jpg -o comparison.png
+```
+
+* Distance between images can be calculated with the `distance` command
+* Uses cosine similarity to compare generated embeddings 
+* Distance is a floating point number between 0 and 1
+* Lower distance means images are more similar
 
 ## Installation
 
@@ -19,27 +97,6 @@ swift build --configuration release
 cp -f .build/release/seev /usr/local/bin/seev
 ```
 
-## Usage
-
-```bash
-$ seev input.jpg
-```
-
-Extracts the subject from `input.jpg` and writes the result to `output.png`.
-
-```bash
-$ seev input.jpg -o foreground.png
-```
-
-Extracts the subject from `input.jpg` and writes the result to `foreground.png`.
-
-```bash
-
-$ seev input.jpg --stdout
-```
-
-Extracts the subject from `input.jpg` and writes the result to stdout.
-
 ## Development
 
 ```sh
@@ -50,7 +107,8 @@ swift run seev <arguments>
 
 ## Next Steps
 
-* Determine which Vision.framework features to support next (face detection, OCR, etc)
+* Determine which Vision.framework features to support next (pose detection, animals, etc)
+* Provide feedback and development direction in [this issue](https://github.com/Nexuist/seeV/issues/7)
 
 ## License
 
