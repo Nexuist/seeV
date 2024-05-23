@@ -1,0 +1,10 @@
+{
+  "A": "assets\/embeddings\/steve-face.png",
+  "B": "assets\/embeddings\/tim-face.png",
+  "distance": 0.59412074089050293
+}
+{
+  "B": "assets\/embeddings\/tim2-face.png",
+  "distance": 0.86706709861755371,
+  "A": "assets\/embeddings\/tim-face.png"
+}
