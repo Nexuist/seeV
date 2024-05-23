@@ -79,8 +79,8 @@ seev distance input.jpg -o comparison.png
 seev distance input.jpg -o comparison.png
 ```
 
-* Distance between images can be calculated with the `distance` command
-* Uses cosine similarity to compare generated embeddings 
+* Calculates distance between images e.g. how similar are two images
+* Automatically generates embeddings and compares using cosine similarity
 * Distance is a floating point number between 0 and 1
 * Lower distance means images are more similar
 
