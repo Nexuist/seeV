@@ -1,6 +1,8 @@
 import ArgumentParser
 import Foundation
 
+let VERSION = "1.6.0"
+
 struct Options: ParsableArguments {
   @Argument(help: "The filepath of the input image")
   var input: String
@@ -22,7 +24,7 @@ enum SeeVError: Error {
 struct seev: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "A command line wrapper over Apple's Vision framework.",
-    version: "1.5.2",
+    version: VERSION,
     subcommands: [
       Subject.self,
       Faces.self,
@@ -30,6 +32,7 @@ struct seev: ParsableCommand {
       Text.self,
       Embeddings.self,
       Distance.self,
+      Classify.self,
     ],
     defaultSubcommand: Subject.self
   )
