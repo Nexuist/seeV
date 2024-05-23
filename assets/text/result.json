@@ -1,0 +1,26 @@
+{
+  "text": [
+    {
+      "confidence": 1,
+      "boundingBox": {
+        "x": 0.34640523047385618,
+        "y": 0.4264705884803921,
+        "height": 0.029411764705882359,
+        "width": 0.13725490196078433
+      },
+      "text": "Apple Campus"
+    },
+    {
+      "text": "One Infinite Loop",
+      "confidence": 1,
+      "boundingBox": {
+        "y": 0.38725490166666676,
+        "height": 0.039215686274509776,
+        "width": 0.16666666666666663,
+        "x": 0.33986927937908495
+      }
+    }
+  ],
+  "input": "assets\/text\/input.jpg",
+  "customWords": []
+}
