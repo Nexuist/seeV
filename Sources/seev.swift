@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-let VERSION = "1.6.0"
+let VERSION = "1.7.0"
 
 struct Options: ParsableArguments {
   @Argument(help: "The filepath of the input image")
@@ -9,14 +9,6 @@ struct Options: ParsableArguments {
 
   @Option(name: [.customShort("o"), .long], help: "The filepath of the output image")
   var output: String?
-}
-
-enum SeeVError: Error {
-  case noSubjectFound
-  case noFeaturePrintFound
-  case invalidCVPixelBuffer(Int32)
-  case outputError
-  case invalidURL
 }
 
 @available(macOS 14.0, *)
@@ -33,6 +25,7 @@ struct seev: ParsableCommand {
       Embeddings.self,
       Distance.self,
       Classify.self,
+      Poses.self,
     ],
     defaultSubcommand: Subject.self
   )

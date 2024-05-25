@@ -6,7 +6,7 @@ import Vision
 struct Classify: ParsableCommand {
   static var configuration: CommandConfiguration = CommandConfiguration(
     abstract: "Classify an image using a Core ML model.",
-    discussion: "The JSON output."
+    discussion: "A list of classifications and their confidence levels."
   )
 
   @OptionGroup() var args: Options

@@ -5,6 +5,14 @@ import UniformTypeIdentifiers
 import VideoToolbox
 import Vision
 
+enum SeeVError: Error {
+  case noSubjectFound
+  case noFeaturePrintFound
+  case invalidCVPixelBuffer(Int32)
+  case outputError
+  case invalidURL
+}
+
 func inputImagePathToURL(_ inputImagePath: String) -> URL {
   if inputImagePath.starts(with: "http") {
     return URL(string: inputImagePath)!
@@ -141,6 +149,85 @@ func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: 
   saveOutput(output: cgImage, outputImagePath: outputImagePath)
 }
 
+/// Draw points into the image and save it to disk
+@available(macOS 11.0, *)
+func writePoints(inputImagePath: String, outputImagePath: String, points: [CGPoint]) {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let inputImage = CIImage(contentsOf: inputURL)!
+  let nsImage = NSImage(size: inputImage.extent.size, flipped: false) { _ in
+    inputImage.draw(at: .zero, from: inputImage.extent, operation: .copy, fraction: 1.0)
+    for point in points {
+      // Draw circles
+      let rect = CGRect(
+        x: point.x * inputImage.extent.width - 2,
+        y: point.y * inputImage.extent.height - 2,
+        width: 4,
+        height: 4
+      )
+      let path = NSBezierPath(ovalIn: rect)
+      path.lineWidth = 2.0
+      NSColor.red.setStroke()
+      path.stroke()
+    }
+    return true
+  }
+  let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+  saveOutput(output: cgImage, outputImagePath: outputImagePath)
+}
+
+@available(macOS 11.0, *)
+func draw(
+  inputImagePath: String,
+  outputImagePath: String,
+  points: [CGPoint],
+  boxes: [CGRect],
+  lines: [(CGPoint, CGPoint)]
+) {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let inputImage = CIImage(contentsOf: inputURL)!
+  let nsImage = NSImage(size: inputImage.extent.size, flipped: false) { _ in
+    inputImage.draw(at: .zero, from: inputImage.extent, operation: .copy, fraction: 1.0)
+    for point in points {
+      // Draw circles
+      let rect = CGRect(
+        x: point.x * inputImage.extent.width - 2,
+        y: point.y * inputImage.extent.height - 2,
+        width: 4,
+        height: 4
+      )
+      let path = NSBezierPath(ovalIn: rect)
+      path.lineWidth = 2.0
+      NSColor.red.setStroke()
+      path.stroke()
+    }
+    for box in boxes {
+      let rect = CGRect(
+        x: box.origin.x * inputImage.extent.width,
+        y: box.origin.y * inputImage.extent.height,
+        width: box.width * inputImage.extent.width,
+        height: box.height * inputImage.extent.height
+      )
+      let path = NSBezierPath(rect: rect)
+      path.lineWidth = 2.0
+      NSColor.red.setStroke()
+      path.stroke()
+    }
+    for (start, end) in lines {
+      let path = NSBezierPath()
+      path.move(
+        to: CGPoint(x: start.x * inputImage.extent.width, y: start.y * inputImage.extent.height))
+      path.line(
+        to: CGPoint(x: end.x * inputImage.extent.width, y: end.y * inputImage.extent.height))
+      path.lineWidth = 2.0
+      NSColor.red.setStroke()
+      path.stroke()
+    }
+    return true
+  }
+  let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+  saveOutput(output: cgImage, outputImagePath: outputImagePath)
+}
+
 /// Save the output image to the specified path
 @available(macOS 11.0, *)
 func saveOutput(output: CGImage, outputImagePath: String) {
@@ -159,4 +246,21 @@ func writeOutput(output: CGImage) throws {
   }
   let stdout = FileHandle.standardOutput
   stdout.write(png)
+}
+
+/// Print a JSON dictionary to stdout
+func printDict(_ dict: [String: Any]) {
+  let jsonData = try! JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+  print(String(data: jsonData, encoding: .utf8)!)
+}
+
+func performRequest<T: VNObservation>(request: VNRequest, inputImagePath: String) throws -> [T] {
+  let inputURL = inputImagePathToURL(inputImagePath)
+  let handler = VNImageRequestHandler(url: inputURL)
+  // Get the type of what the request results are
+  try handler.perform([request])
+  guard let results = request.results else {
+    return []
+  }
+  return results as! [T]
 }
