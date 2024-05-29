@@ -26,6 +26,7 @@ struct seev: ParsableCommand {
       Distance.self,
       Classify.self,
       Poses.self,
+      All.self,
     ],
     defaultSubcommand: Subject.self
   )

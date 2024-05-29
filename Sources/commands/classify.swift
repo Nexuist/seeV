@@ -20,7 +20,10 @@ struct Classify: ParsableCommand {
 
   mutating func run() {
     do {
-      let classifications = try classifyImage(inputImagePath: args.input)
+      let classifications: [VNClassificationObservation] = try performRequest(
+        request: VNClassifyImageRequest(),
+        inputImagePath: args.input
+      )
       let filteredClassifications = classifications.filter { $0.confidence >= minimumConfidence }
       var classificiationsDict: [String: Any] = [
         "input": args.input,
@@ -31,7 +34,6 @@ struct Classify: ParsableCommand {
           ]
         },
       ]
-      print(includeIdentifiers)
       for identifier in includeIdentifiers {
         if !filteredClassifications.contains(where: { $0.identifier == identifier }) {
           var mutableClassifications = classificiationsDict["classifications"] as! [[String: Any]]
@@ -43,26 +45,11 @@ struct Classify: ParsableCommand {
           classificiationsDict["classifications"] = mutableClassifications
         }
       }
-      let jsonData = try JSONSerialization.data(
-        withJSONObject: classificiationsDict, options: .prettyPrinted)
-      print(String(data: jsonData, encoding: .utf8)!)
+      printDict(classificiationsDict)
 
     } catch {
       print("Error: \(error)")
     }
   }
-
-}
-
-@available(macOS 10.15, *)
-func classifyImage(inputImagePath: String) throws -> [VNClassificationObservation] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNClassifyImageRequest()
-  let handler = VNImageRequestHandler(url: inputURL)
-  try handler.perform([request])
-  guard let result = request.results else {
-    return []
-  }
-  return result
 
 }
