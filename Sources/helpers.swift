@@ -34,6 +34,16 @@ func performRequest<T: VNObservation>(request: VNRequest, inputImagePath: String
   return results as! [T]
 }
 
+// performRequest with a CGImage input
+func performRequest<T: VNObservation>(request: VNRequest, input: CGImage) throws -> [T] {
+  let handler = VNImageRequestHandler(cgImage: input)
+  try handler.perform([request])
+  guard let results = request.results else {
+    return []
+  }
+  return results as! [T]
+}
+
 // /// Detect humans in the input image and return the results as an array of VNHumanObservation
 // @available(macOS 12.0, *)
 // func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {

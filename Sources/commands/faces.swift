@@ -45,7 +45,20 @@ struct Faces: ParsableCommand {
               "confidence": face.confidence,
             ] as [String: Any]
           if embeddings {
-            result["embedding"] = "beep boop"
+            let faceImage = try? cropImage(
+              inputImagePath: args.input,
+              boundingBox: face.boundingBox
+            )
+            if faceImage == nil { return result }
+            let request = VNGenerateImageFeaturePrintRequest()
+            let featurePrint: [VNFeaturePrintObservation]? = try? performRequest(
+              request: request,
+              input: faceImage!
+            )
+            if featurePrint == nil { return result }
+            result["embedding"] = featurePrint!.first!.data.withUnsafeBytes {
+              Array($0.bindMemory(to: Float.self))
+            }
           }
           return result
         },
