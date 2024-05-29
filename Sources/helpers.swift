@@ -13,6 +13,7 @@ enum SeeVError: Error {
   case invalidURL
 }
 
+/// Convert the input image path to a URL
 func inputImagePathToURL(_ inputImagePath: String) -> URL {
   if inputImagePath.starts(with: "http") {
     return URL(string: inputImagePath)!
@@ -21,85 +22,63 @@ func inputImagePathToURL(_ inputImagePath: String) -> URL {
   }
 }
 
-/// Extract the subject from the input image and return it as a CGImage
-@available(macOS 14.0, *)
-func extractSubject(inputImagePath: String, cropped: Bool) throws -> CGImage {
+/// Perform a Vision request on the input image and return the results as an array of the specified type
+func performRequest<T: VNObservation>(request: VNRequest, inputImagePath: String) throws -> [T] {
   let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNGenerateForegroundInstanceMaskRequest()
   let handler = VNImageRequestHandler(url: inputURL)
+  // Get the type of what the request results are
   try handler.perform([request])
-  guard let result: VNInstanceMaskObservation = request.results?.first else {
-    throw SeeVError.noSubjectFound
-  }
-  // This returns a CVPixelBuffer
-  let maskBuffer = try result.generateMaskedImage(
-    ofInstances: result.allInstances, from: handler, croppedToInstancesExtent: cropped
-  )
-  var output: CGImage?
-  let conversionCode = VTCreateCGImageFromCVPixelBuffer(maskBuffer, options: nil, imageOut: &output)
-  guard conversionCode == 0 else {
-    throw SeeVError.invalidCVPixelBuffer(conversionCode)
-  }
-  return output!
-}
-
-/// Detect faces in the input image and return the results as an array of VNFaceObservation
-func extractFaces(inputImagePath: String) throws -> [VNFaceObservation] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNDetectFaceRectanglesRequest()
-  let handler = VNImageRequestHandler(url: inputURL)
-  try handler.perform([request])
-  guard let result = request.results else {
+  guard let results = request.results else {
     return []
   }
-  return result
+  return results as! [T]
 }
 
-/// Detect humans in the input image and return the results as an array of VNHumanObservation
-@available(macOS 12.0, *)
-func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNDetectHumanRectanglesRequest()
-  let handler = VNImageRequestHandler(url: inputURL)
-  try handler.perform([request])
-  guard let result = request.results else {
-    return []
-  }
-  return result
-}
+// /// Detect humans in the input image and return the results as an array of VNHumanObservation
+// @available(macOS 12.0, *)
+// func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
+//   let inputURL = inputImagePathToURL(inputImagePath)
+//   let request = VNDetectHumanRectanglesRequest()
+//   let handler = VNImageRequestHandler(url: inputURL)
+//   try handler.perform([request])
+//   guard let result = request.results else {
+//     return []
+//   }
+//   return result
+// }
 
-/// Extract text from the input image and return the results as an array of VNRecognizedTextObservation
-@available(macOS 10.15, *)
-func extractText(inputImagePath: String, customWords: [String]? = []) throws
-  -> [VNRecognizedTextObservation]
-{
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNRecognizeTextRequest()
-  request.recognitionLevel = .accurate
-  request.usesLanguageCorrection = true
-  request.customWords = []
-  let handler = VNImageRequestHandler(url: inputURL)
-  try handler.perform([request])
-  guard let result = request.results else {
-    return []
-  }
-  return result
-}
+// /// Extract text from the input image and return the results as an array of VNRecognizedTextObservation
+// @available(macOS 10.15, *)
+// func extractText(inputImagePath: String, customWords: [String]? = []) throws
+//   -> [VNRecognizedTextObservation]
+// {
+//   let inputURL = inputImagePathToURL(inputImagePath)
+//   let request = VNRecognizeTextRequest()
+//   request.recognitionLevel = .accurate
+//   request.usesLanguageCorrection = true
+//   request.customWords = []
+//   let handler = VNImageRequestHandler(url: inputURL)
+//   try handler.perform([request])
+//   guard let result = request.results else {
+//     return []
+//   }
+//   return result
+// }
 
-/// Infer a feature print from the input image and return a float array
-@available(macOS 10.15, *)
-func inferFeaturePrint(inputImagePath: String) throws -> [Float] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let request = VNGenerateImageFeaturePrintRequest()
-  let handler = VNImageRequestHandler(url: inputURL)
-  try handler.perform([request])
-  guard let result = request.results?.first as? VNFeaturePrintObservation else {
-    throw SeeVError.noFeaturePrintFound
-  }
-  return result.data.withUnsafeBytes {
-    Array($0.bindMemory(to: Float.self))
-  }
-}
+// /// Infer a feature print from the input image and return a float array
+// @available(macOS 10.15, *)
+// func inferFeaturePrint(inputImagePath: String) throws -> [Float] {
+//   let inputURL = inputImagePathToURL(inputImagePath)
+//   let request = VNGenerateImageFeaturePrintRequest()
+//   let handler = VNImageRequestHandler(url: inputURL)
+//   try handler.perform([request])
+//   guard let result = request.results?.first as? VNFeaturePrintObservation else {
+//     throw SeeVError.noFeaturePrintFound
+//   }
+//   return result.data.withUnsafeBytes {
+//     Array($0.bindMemory(to: Float.self))
+//   }
+// }
 
 func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
   let dotProduct = zip(a, b).map(*).reduce(0, +)
@@ -122,57 +101,6 @@ func cropImage(inputImagePath: String, boundingBox: CGRect) throws -> CGImage {
   let context = CIContext(options: nil)
   let cgImage = context.createCGImage(croppedImage, from: croppedImage.extent)!
   return cgImage
-}
-
-/// Draw bounding boxes into the image and save it to disk
-@available(macOS 11.0, *)
-func writeBoundingBoxes(inputImagePath: String, outputImagePath: String, boxes: [CGRect]) {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let inputImage = CIImage(contentsOf: inputURL)!
-  let nsImage = NSImage(size: inputImage.extent.size, flipped: false) { _ in
-    inputImage.draw(at: .zero, from: inputImage.extent, operation: .copy, fraction: 1.0)
-    for box in boxes {
-      let rect = CGRect(
-        x: box.origin.x * inputImage.extent.width,
-        y: box.origin.y * inputImage.extent.height,
-        width: box.width * inputImage.extent.width,
-        height: box.height * inputImage.extent.height
-      )
-      let path = NSBezierPath(rect: rect)
-      path.lineWidth = 2.0
-      NSColor.red.setStroke()
-      path.stroke()
-    }
-    return true
-  }
-  let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)!
-  saveOutput(output: cgImage, outputImagePath: outputImagePath)
-}
-
-/// Draw points into the image and save it to disk
-@available(macOS 11.0, *)
-func writePoints(inputImagePath: String, outputImagePath: String, points: [CGPoint]) {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let inputImage = CIImage(contentsOf: inputURL)!
-  let nsImage = NSImage(size: inputImage.extent.size, flipped: false) { _ in
-    inputImage.draw(at: .zero, from: inputImage.extent, operation: .copy, fraction: 1.0)
-    for point in points {
-      // Draw circles
-      let rect = CGRect(
-        x: point.x * inputImage.extent.width - 2,
-        y: point.y * inputImage.extent.height - 2,
-        width: 4,
-        height: 4
-      )
-      let path = NSBezierPath(ovalIn: rect)
-      path.lineWidth = 2.0
-      NSColor.red.setStroke()
-      path.stroke()
-    }
-    return true
-  }
-  let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)!
-  saveOutput(output: cgImage, outputImagePath: outputImagePath)
 }
 
 @available(macOS 11.0, *)
@@ -252,15 +180,4 @@ func writeOutput(output: CGImage) throws {
 func printDict(_ dict: [String: Any]) {
   let jsonData = try! JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
   print(String(data: jsonData, encoding: .utf8)!)
-}
-
-func performRequest<T: VNObservation>(request: VNRequest, inputImagePath: String) throws -> [T] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let handler = VNImageRequestHandler(url: inputURL)
-  // Get the type of what the request results are
-  try handler.perform([request])
-  guard let results = request.results else {
-    return []
-  }
-  return results as! [T]
 }
