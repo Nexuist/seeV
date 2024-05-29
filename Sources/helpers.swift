@@ -44,52 +44,6 @@ func performRequest<T: VNObservation>(request: VNRequest, input: CGImage) throws
   return results as! [T]
 }
 
-// /// Detect humans in the input image and return the results as an array of VNHumanObservation
-// @available(macOS 12.0, *)
-// func extractHumans(inputImagePath: String) throws -> [VNHumanObservation] {
-//   let inputURL = inputImagePathToURL(inputImagePath)
-//   let request = VNDetectHumanRectanglesRequest()
-//   let handler = VNImageRequestHandler(url: inputURL)
-//   try handler.perform([request])
-//   guard let result = request.results else {
-//     return []
-//   }
-//   return result
-// }
-
-// /// Extract text from the input image and return the results as an array of VNRecognizedTextObservation
-// @available(macOS 10.15, *)
-// func extractText(inputImagePath: String, customWords: [String]? = []) throws
-//   -> [VNRecognizedTextObservation]
-// {
-//   let inputURL = inputImagePathToURL(inputImagePath)
-//   let request = VNRecognizeTextRequest()
-//   request.recognitionLevel = .accurate
-//   request.usesLanguageCorrection = true
-//   request.customWords = []
-//   let handler = VNImageRequestHandler(url: inputURL)
-//   try handler.perform([request])
-//   guard let result = request.results else {
-//     return []
-//   }
-//   return result
-// }
-
-// /// Infer a feature print from the input image and return a float array
-// @available(macOS 10.15, *)
-// func inferFeaturePrint(inputImagePath: String) throws -> [Float] {
-//   let inputURL = inputImagePathToURL(inputImagePath)
-//   let request = VNGenerateImageFeaturePrintRequest()
-//   let handler = VNImageRequestHandler(url: inputURL)
-//   try handler.perform([request])
-//   guard let result = request.results?.first as? VNFeaturePrintObservation else {
-//     throw SeeVError.noFeaturePrintFound
-//   }
-//   return result.data.withUnsafeBytes {
-//     Array($0.bindMemory(to: Float.self))
-//   }
-// }
-
 func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
   let dotProduct = zip(a, b).map(*).reduce(0, +)
   let magnitudeA = sqrt(a.map { $0 * $0 }.reduce(0, +))
