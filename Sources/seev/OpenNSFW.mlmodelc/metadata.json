@@ -1,0 +1,75 @@
+[
+  {
+    "metadataOutputVersion" : "3.0",
+    "storagePrecision" : "Float32",
+    "outputSchema" : [
+      {
+        "isOptional" : "0",
+        "keyType" : "String",
+        "formattedType" : "Dictionary (String → Double)",
+        "type" : "Dictionary",
+        "name" : "prob",
+        "shortDescription" : ""
+      },
+      {
+        "isOptional" : "0",
+        "formattedType" : "String",
+        "type" : "String",
+        "name" : "classLabel",
+        "shortDescription" : ""
+      }
+    ],
+    "modelParameters" : [
+
+    ],
+    "specificationVersion" : 1,
+    "computePrecision" : "Float16",
+    "isUpdatable" : "0",
+    "availability" : {
+      "macOS" : "10.13",
+      "tvOS" : "11.0",
+      "visionOS" : "1.0",
+      "watchOS" : "4.0",
+      "iOS" : "11.0",
+      "macCatalyst" : "11.0"
+    },
+    "modelType" : {
+      "name" : "MLModelType_neuralNetworkClassifier"
+    },
+    "userDefinedMetadata" : {
+
+    },
+    "classLabels" : [
+      "SFW",
+      "NSFW"
+    ],
+    "generatedClassName" : "OpenNSFW",
+    "inputSchema" : [
+      {
+        "height" : "224",
+        "colorspace" : "BGR",
+        "isOptional" : "0",
+        "width" : "224",
+        "isColor" : "1",
+        "formattedType" : "Image (Color 224 × 224)",
+        "hasSizeFlexibility" : "0",
+        "type" : "Image",
+        "shortDescription" : "",
+        "name" : "data"
+      }
+    ],
+    "neuralNetworkLayerTypeHistogram" : {
+      "ActivationReLU" : 49,
+      "Flatten" : 1,
+      "Scale" : 53,
+      "Add" : 16,
+      "PoolingAverage" : 1,
+      "Softmax" : 1,
+      "BatchNorm" : 53,
+      "Convolution" : 53,
+      "InnerProduct" : 1,
+      "PoolingMax" : 1
+    },
+    "method" : "predict"
+  }
+]
