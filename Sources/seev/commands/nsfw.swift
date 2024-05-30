@@ -20,22 +20,19 @@ struct NSFW: AsyncParsableCommand {
       )
       let vnModel = try VNCoreMLModel(for: model.model)
       let handler = VNImageRequestHandler(url: inputImagePathToURL(args.input))
-      // Handle model results
-      let request = VNCoreMLRequest(model: vnModel) { request, error in
-        if let error = error {
-          print("Error: \(error)")
-          return
-        }
-        guard let results = request.results as? [VNClassificationObservation] else {
-          print("No results")
-          return
-        }
-        for result in results {
-          print("\(result.identifier): \(result.confidence)")
-        }
-      }
+      let request = VNCoreMLRequest(model: vnModel)
       // Run the model
       try handler.perform([request])
+      guard let results = request.results as? [VNClassificationObservation] else {
+        return printDict([
+          "input": args.input
+        ])
+      }
+      printDict([
+        "input": args.input,
+        "nsfw": results[0].confidence,
+        "sfw": results[1].confidence,
+      ])
     } catch {
       print("Error: \(error)")
     }
