@@ -121,6 +121,8 @@ struct All: ParsableCommand {
           Array($0.bindMemory(to: Float.self))
         }
       }
+      // Hash
+      result["sha1"] = try hashFile(inputImagePath: args.input)
       // Print the result
       printDict(result)
     } catch {

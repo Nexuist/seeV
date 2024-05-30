@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-let VERSION = "1.8.0"
+let VERSION = "1.8.1"
 
 struct Options: ParsableArguments {
   @Argument(help: "The filepath of the input image")
@@ -27,6 +27,7 @@ struct seev: ParsableCommand {
       Classify.self,
       Poses.self,
       All.self,
+      SHA1.self,
     ],
     defaultSubcommand: Subject.self
   )
