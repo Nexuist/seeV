@@ -61,8 +61,6 @@ seev text input.jpg -o output.png
 seev embeddings input.jpg
 ```
 
-
-
 ```sh
 seev distance input.jpg -o comparison.png
 ```
@@ -115,7 +113,7 @@ swift run seev <arguments>
 ```text
 MIT License
 
-Copyright (c) 2023 Andi Andreas
+Copyright (c) 2024 Andi Andreas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
