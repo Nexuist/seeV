@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-      "type": "lldb",
+      "type": "swift",
       "request": "launch",
       "sourceLanguages": [
         "swift"
@@ -9,11 +9,12 @@
       "args": [],
       "cwd": "${workspaceFolder:seeV}",
       "name": "Debug seev",
-      "program": "${workspaceFolder:seeV}/.build/debug/seev",
-      "preLaunchTask": "swift: Build Debug seev"
+      "preLaunchTask": "swift: Build Debug seev",
+      "target": "seev",
+      "configuration": "debug"
     },
     {
-      "type": "lldb",
+      "type": "swift",
       "request": "launch",
       "sourceLanguages": [
         "swift"
@@ -21,8 +22,9 @@
       "args": [],
       "cwd": "${workspaceFolder:seeV}",
       "name": "Release seev",
-      "program": "${workspaceFolder:seeV}/.build/release/seev",
-      "preLaunchTask": "swift: Build Release seev"
+      "preLaunchTask": "swift: Build Release seev",
+      "target": "seev",
+      "configuration": "release"
     }
   ]
 }

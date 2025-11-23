@@ -41,6 +41,18 @@ seev humans input.jpg -o output.png
 * Only the upper body needs to be visible for detection (does not require full body)
 * Red bounding boxes can be drawn around each human
 
+### Pose Detection
+
+![Pose demo](assets/poses/output.png)
+
+```sh
+seev poses input.jpg -o output.png
+```
+
+* Requires macOS 11 or later
+* Results are output in JSON and include the joints with x/y coordinates and confidence
+* Joint locations and limb connections are drawn to the output image when `-o` is provided
+
 ### Text Detection (OCR)
 
 ![Text demo](assets/demos/text.png)
