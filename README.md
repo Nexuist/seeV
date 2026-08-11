@@ -94,6 +94,26 @@ seev distance input.jpg comparison.png
 * Distance is a floating point number between 0 and 1
 * Lower distance means images are more similar
 
+### Image Quality
+
+```sh
+seev quality input.jpg
+```
+
+The `quality` command uses Apple Vision to score the aesthetic quality of an image:
+
+```json
+{
+  "input": "input.jpg",
+  "overallScore": 0.72,
+  "isUtility": false
+}
+```
+
+* `overallScore` ranges from `-1` (least desirable) to `1` (most desirable).
+* `isUtility` identifies useful images that may not have memorable or exciting content.
+* Scores are most useful for ranking images or video frames rather than as a universal pass/fail threshold.
+
 ### Image Moderation
 
 `seev nsfw` classifies images as NSFW using ShieldGemma 2 through Ollama. Its policy covers nudity, visible intimate body parts, and erotic presentation. It does not perform text moderation. Images remain on the local machine when using the default local Ollama endpoint.
