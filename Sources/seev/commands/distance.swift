@@ -7,35 +7,42 @@ struct Distance: ParsableCommand {
 
   static var configuration = CommandConfiguration(
     abstract:
-      "Calculates embeddings for the input and output images and the distance between them."
+      "Calculates embeddings for two images and the distance between them."
   )
 
-  @OptionGroup() var args: Options
+  @Argument(help: "The filepath of the first image")
+  var firstImage: String
 
-  mutating func run() {
-    do {
-      let req1 = VNGenerateImageFeaturePrintRequest()
-      let embedding1: VNFeaturePrintObservation = try performRequest(
-        request: req1, inputImagePath: args.input
-      ).first!
-      let weights1 = embedding1.data.withUnsafeBytes {
-        Array($0.bindMemory(to: Float.self))
-      }
-      let req2 = VNGenerateImageFeaturePrintRequest()
-      let embedding2: VNFeaturePrintObservation = try performRequest(
-        request: req2, inputImagePath: args.output!
-      ).first!
-      let weights2 = embedding2.data.withUnsafeBytes {
-        Array($0.bindMemory(to: Float.self))
-      }
-      // Calculate cosine similarity
-      printDict([
-        "A": args.input,
-        "B": args.output!,
-        "distance": 1 - cosineSimilarity(weights1, weights2),
-      ])
-    } catch {
-      print("Error: \(error)")
+  @Argument(help: "The filepath of the second image")
+  var secondImage: String
+
+  mutating func run() throws {
+    let req1 = VNGenerateImageFeaturePrintRequest()
+    let embeddings1: [VNFeaturePrintObservation] = try performRequest(
+      request: req1, inputImagePath: firstImage
+    )
+    guard let embedding1 = embeddings1.first else {
+      throw SeeVError.noFeaturePrintFound
     }
+    let weights1 = embedding1.data.withUnsafeBytes {
+      Array($0.bindMemory(to: Float.self))
+    }
+
+    let req2 = VNGenerateImageFeaturePrintRequest()
+    let embeddings2: [VNFeaturePrintObservation] = try performRequest(
+      request: req2, inputImagePath: secondImage
+    )
+    guard let embedding2 = embeddings2.first else {
+      throw SeeVError.noFeaturePrintFound
+    }
+    let weights2 = embedding2.data.withUnsafeBytes {
+      Array($0.bindMemory(to: Float.self))
+    }
+
+    printDict([
+      "A": firstImage,
+      "B": secondImage,
+      "distance": 1 - cosineSimilarity(weights1, weights2),
+    ])
   }
 }

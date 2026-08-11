@@ -13,8 +13,7 @@ let package = Package(
     // Targets can depend on other targets in this package and products from dependencies.
     .executableTarget(
       name: "seev",
-      dependencies: [.product(name: "ArgumentParser", package: "swift-argument-parser")],
-      resources: [.copy("./OpenNSFW.mlmodelc")]
-    )
+      dependencies: [.product(name: "ArgumentParser", package: "swift-argument-parser")]
+    ),
   ]
 )
