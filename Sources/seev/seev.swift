@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-let VERSION = "2.1.0"
+let VERSION = "2.2.0"
 
 struct Options: ParsableArguments {
   @Argument(help: "The filepath of the input image")
@@ -25,6 +25,7 @@ struct seev: AsyncParsableCommand {
       Embeddings.self,
       Distance.self,
       Classify.self,
+      Quality.self,
       Poses.self,
       All.self,
       Most.self,
