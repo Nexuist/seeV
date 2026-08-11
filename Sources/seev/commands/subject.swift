@@ -12,28 +12,25 @@ struct Subject: ParsableCommand {
   static var configuration = CommandConfiguration(
     abstract: "Removes the background from an image.",
     discussion:
-      "The output image will have the background removed. If the --cropped flag is provided, the output will be cropped to the subject's bounding box. If the --stdout flag is provided, the output will be written to stdout."
+      "The output image will have the background removed. If the --cropped flag is provided, the output will be cropped to the subject's bounding box. Without --output, the PNG is written to stdout."
   )
 
-  @OptionGroup() var args: Options
+  @OptionGroup var args: ImageOutputOptions
   @Flag(name: [.customShort("c"), .long], help: "Crop the output to the subject's bounding box")
   var cropped: Bool = false
 
-  @Flag(name: [.long], help: "Write output to stdout")
-  var stdout: Bool = false
+  mutating func run() throws {
+    guard !isVideoInput(args.input) else {
+      throw ValidationError("Subject extraction supports images only.")
+    }
 
-  mutating func run() {
-    do {
-      print("Removing background from \(args.input)...")
-      let output = try extractSubject(inputImagePath: args.input, cropped: cropped)
-      if args.output == nil {
-        try writeOutput(output: output)
-      } else {
-        saveOutput(output: output, outputImagePath: args.output!)
-        print("Saved to \(args.output!)")
-      }
-    } catch {
-      print("Error: \(error)")
+    printStatus("Removing background from \(args.input)...")
+    let output = try extractSubject(inputImagePath: args.input, cropped: cropped)
+    if let outputPath = args.output {
+      saveOutput(output: output, outputImagePath: outputPath)
+      printStatus("Saved to \(outputPath)")
+    } else {
+      try writeOutput(output: output)
     }
   }
 }

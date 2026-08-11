@@ -1,55 +1,36 @@
 import ArgumentParser
-import Foundation
-import Vision
 
-@available(macOS 10.15, *)
-struct Classify: ParsableCommand {
-  static var configuration: CommandConfiguration = CommandConfiguration(
-    abstract: "Classify an image using a Core ML model.",
+@available(macOS 15.0, *)
+struct Classify: AsyncParsableCommand {
+  static var configuration = CommandConfiguration(
+    abstract: "Classifies an image or representative video frames using Vision.",
     discussion: "A list of classifications and their confidence levels."
   )
 
-  @OptionGroup() var args: Options
+  @OptionGroup var args: MediaOptions
+
   @Option(name: .shortAndLong, help: "Minimum confidence for predictions.")
   var minimumConfidence: Float = 0.4
+
   @Option(
     name: .shortAndLong,
     parsing: .upToNextOption,
-    help: "Identifiers to include even if they don't meet the minimum confidence.")
+    help: "Identifiers to include even if they don't meet the minimum confidence."
+  )
   var includeIdentifiers: [String] = []
 
-  mutating func run() {
-    do {
-      let classifications: [VNClassificationObservation] = try performRequest(
-        request: VNClassifyImageRequest(),
-        inputImagePath: args.input
+  mutating func run() async throws {
+    let result = try await analyzeMedia(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      operationName: "classifications"
+    ) { input in
+      try classificationAnalysis(
+        input: input,
+        minimumConfidence: minimumConfidence,
+        includeIdentifiers: includeIdentifiers
       )
-      let filteredClassifications = classifications.filter { $0.confidence >= minimumConfidence }
-      var classificiationsDict: [String: Any] = [
-        "input": args.input,
-        "classifications": filteredClassifications.map { classification in
-          [
-            "identifier": classification.identifier,
-            "confidence": classification.confidence,
-          ]
-        },
-      ]
-      for identifier in includeIdentifiers {
-        if !filteredClassifications.contains(where: { $0.identifier == identifier }) {
-          var mutableClassifications = classificiationsDict["classifications"] as! [[String: Any]]
-          mutableClassifications.append([
-            "identifier": identifier,
-            "confidence": classifications.first(where: { $0.identifier == identifier })?.confidence
-              ?? 0,
-          ])
-          classificiationsDict["classifications"] = mutableClassifications
-        }
-      }
-      printDict(classificiationsDict)
-
-    } catch {
-      print("Error: \(error)")
     }
+    printDict(result.output)
   }
-
 }

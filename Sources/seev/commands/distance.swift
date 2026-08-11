@@ -17,9 +17,13 @@ struct Distance: ParsableCommand {
   var secondImage: String
 
   mutating func run() throws {
-    let req1 = VNGenerateImageFeaturePrintRequest()
-    let embeddings1: [VNFeaturePrintObservation] = try performRequest(
-      request: req1, inputImagePath: firstImage
+    guard !isVideoInput(firstImage), !isVideoInput(secondImage) else {
+      throw ValidationError("Distance supports images only.")
+    }
+
+    let firstInput = AnalysisInput.url(inputImagePathToURL(firstImage))
+    let embeddings1: [VNFeaturePrintObservation] = try firstInput.perform(
+      VNGenerateImageFeaturePrintRequest()
     )
     guard let embedding1 = embeddings1.first else {
       throw SeeVError.noFeaturePrintFound
@@ -28,9 +32,9 @@ struct Distance: ParsableCommand {
       Array($0.bindMemory(to: Float.self))
     }
 
-    let req2 = VNGenerateImageFeaturePrintRequest()
-    let embeddings2: [VNFeaturePrintObservation] = try performRequest(
-      request: req2, inputImagePath: secondImage
+    let secondInput = AnalysisInput.url(inputImagePathToURL(secondImage))
+    let embeddings2: [VNFeaturePrintObservation] = try secondInput.perform(
+      VNGenerateImageFeaturePrintRequest()
     )
     guard let embedding2 = embeddings2.first else {
       throw SeeVError.noFeaturePrintFound

@@ -8,7 +8,7 @@ struct SHA1: ParsableCommand {
     abstract: "Hashes the image using the SHA-1 algorithm."
   )
 
-  @OptionGroup() var args: Options
+  @OptionGroup var args: InputOptions
 
   mutating func run() {
     do {

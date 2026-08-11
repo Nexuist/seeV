@@ -22,28 +22,6 @@ func inputImagePathToURL(_ inputImagePath: String) -> URL {
   }
 }
 
-/// Perform a Vision request on the input image and return the results as an array of the specified type
-func performRequest<T: VNObservation>(request: VNRequest, inputImagePath: String) throws -> [T] {
-  let inputURL = inputImagePathToURL(inputImagePath)
-  let handler = VNImageRequestHandler(url: inputURL)
-  // Get the type of what the request results are
-  try handler.perform([request])
-  guard let results = request.results else {
-    return []
-  }
-  return results as! [T]
-}
-
-// performRequest with a CGImage input
-func performRequest<T: VNObservation>(request: VNRequest, input: CGImage) throws -> [T] {
-  let handler = VNImageRequestHandler(cgImage: input)
-  try handler.perform([request])
-  guard let results = request.results else {
-    return []
-  }
-  return results as! [T]
-}
-
 func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
   let dotProduct = zip(a, b).map(*).reduce(0, +)
   let magnitudeA = sqrt(a.map { $0 * $0 }.reduce(0, +))
@@ -54,7 +32,13 @@ func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
 /// Crop the input image using the specified bounding box and return the result as a CGImage
 func cropImage(inputImagePath: String, boundingBox: CGRect) throws -> CGImage {
   let inputURL = inputImagePathToURL(inputImagePath)
-  let inputImage = CIImage(contentsOf: inputURL)!
+  return try cropImage(inputURL: inputURL, boundingBox: boundingBox)
+}
+
+func cropImage(inputURL: URL, boundingBox: CGRect) throws -> CGImage {
+  guard let inputImage = CIImage(contentsOf: inputURL) else {
+    throw SeeVError.outputError
+  }
   let adjustedBoundingBox = CGRect(
     x: boundingBox.origin.x * inputImage.extent.width,
     y: boundingBox.origin.y * inputImage.extent.height,
@@ -63,8 +47,27 @@ func cropImage(inputImagePath: String, boundingBox: CGRect) throws -> CGImage {
   )
   let croppedImage = inputImage.cropped(to: adjustedBoundingBox)
   let context = CIContext(options: nil)
-  let cgImage = context.createCGImage(croppedImage, from: croppedImage.extent)!
-  return cgImage
+  guard let image = context.createCGImage(croppedImage, from: croppedImage.extent) else {
+    throw SeeVError.outputError
+  }
+  return image
+}
+
+/// Crop a CGImage using a normalized Vision bounding box.
+func cropImage(input: CGImage, boundingBox: CGRect) throws -> CGImage {
+  let inputImage = CIImage(cgImage: input)
+  let adjustedBoundingBox = CGRect(
+    x: boundingBox.origin.x * inputImage.extent.width,
+    y: boundingBox.origin.y * inputImage.extent.height,
+    width: boundingBox.width * inputImage.extent.width,
+    height: boundingBox.height * inputImage.extent.height
+  )
+  let croppedImage = inputImage.cropped(to: adjustedBoundingBox)
+  let context = CIContext(options: nil)
+  guard let image = context.createCGImage(croppedImage, from: croppedImage.extent) else {
+    throw SeeVError.outputError
+  }
+  return image
 }
 
 @available(macOS 11.0, *)
@@ -140,8 +143,21 @@ func writeOutput(output: CGImage) throws {
   stdout.write(png)
 }
 
+/// Print a human-readable status message to stderr.
+func printStatus(_ message: String) {
+  FileHandle.standardError.write(Data("\(message)\n".utf8))
+}
+
 /// Print a JSON dictionary to stdout
 func printDict(_ dict: [String: Any]) {
-  let jsonData = try! JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+  printJSON(dict)
+}
+
+/// Print any JSON value to stdout
+func printJSON(_ value: Any) {
+  let jsonData = try! JSONSerialization.data(
+    withJSONObject: value,
+    options: [.prettyPrinted, .fragmentsAllowed]
+  )
   print(String(data: jsonData, encoding: .utf8)!)
 }

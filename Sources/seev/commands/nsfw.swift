@@ -1,14 +1,13 @@
 import ArgumentParser
-import Foundation
 
-@available(macOS 12.0, *)
+@available(macOS 15.0, *)
 struct NSFW: AsyncParsableCommand {
-  static var configuration: CommandConfiguration = CommandConfiguration(
-    abstract: "Checks whether an image is NSFW using ShieldGemma through Ollama."
+  static var configuration = CommandConfiguration(
+    abstract:
+      "Checks whether an image or representative video frames are NSFW using ShieldGemma through Ollama."
   )
 
-  @Argument(help: "The filepath of the input image")
-  var input: String
+  @OptionGroup var args: MediaOptions
 
   @Option(
     name: [.customLong("ollama-host")],
@@ -18,13 +17,19 @@ struct NSFW: AsyncParsableCommand {
 
   mutating func run() async throws {
     let classifier = try ShieldGemmaNSFWClassifier(host: ollamaHost)
-    let violation = try await classifier.isNSFW(imageAt: inputImagePathToURL(input))
-
-    printDict([
-      "input": input,
-      "model": ShieldGemmaNSFWClassifier.model,
-      "policy": ShieldGemmaNSFWClassifier.policyName,
-      "violation": violation,
-    ])
+    let result = try await analyzeMedia(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      operationName: "nsfw"
+    ) { input in
+      FrameAnalysisResult(output: [
+        "nsfw": try await input.isNSFW(using: classifier)
+      ])
+    }
+    if let nsfw = result.output["nsfw"] {
+      printJSON(nsfw)
+    } else {
+      printDict(result.output)
+    }
   }
 }

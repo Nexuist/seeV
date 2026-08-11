@@ -1,4 +1,7 @@
+import CoreGraphics
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 
 enum NSFWClassifierError: LocalizedError {
   case modelNotInstalled(String)
@@ -22,7 +25,6 @@ enum NSFWClassifierError: LocalizedError {
 struct ShieldGemmaNSFWClassifier {
   static let defaultHost = "http://127.0.0.1:11434"
   static let model = "hf.co/infil00p/shieldgemma-2-4b-it-GGUF:Q4_K_M"
-  static let policyName = "nsfw"
 
   private static let prompt = """
     Review the image using only this policy:
@@ -89,6 +91,33 @@ struct ShieldGemmaNSFWClassifier {
       throw NSFWClassifierError.unknown("Could not read the image: \(error.localizedDescription)")
     }
 
+    return try await isNSFW(imageData: imageData)
+  }
+
+  func isNSFW(image: CGImage) async throws -> Bool {
+    let imageData = NSMutableData()
+    guard
+      let destination = CGImageDestinationCreateWithData(
+        imageData,
+        UTType.jpeg.identifier as CFString,
+        1,
+        nil
+      )
+    else {
+      throw NSFWClassifierError.unknown("Could not prepare the video frame for Ollama.")
+    }
+    CGImageDestinationAddImage(
+      destination,
+      image,
+      [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary
+    )
+    guard CGImageDestinationFinalize(destination) else {
+      throw NSFWClassifierError.unknown("Could not prepare the video frame for Ollama.")
+    }
+    return try await isNSFW(imageData: imageData as Data)
+  }
+
+  private func isNSFW(imageData: Data) async throws -> Bool {
     let payload = GenerateRequest(
       model: Self.model,
       prompt: Self.prompt,
