@@ -12,20 +12,19 @@ struct Embeddings: ParsableCommand {
 
   @OptionGroup() var args: Options
 
-  mutating func run() {
-    do {
-      let embeddings: [VNFeaturePrintObservation] = try performRequest(
-        request: VNGenerateImageFeaturePrintRequest(),
-        inputImagePath: args.input
-      )
-      printDict([
-        "input": args.input,
-        "embedding": embeddings.first!.data.withUnsafeBytes {
-          Array($0.bindMemory(to: Float.self))
-        },
-      ])
-    } catch {
-      print("Error: \(error)")
+  mutating func run() throws {
+    let embeddings: [VNFeaturePrintObservation] = try performRequest(
+      request: VNGenerateImageFeaturePrintRequest(),
+      inputImagePath: args.input
+    )
+    guard let embedding = embeddings.first else {
+      throw SeeVError.noFeaturePrintFound
     }
+    printDict([
+      "input": args.input,
+      "embedding": embedding.data.withUnsafeBytes {
+        Array($0.bindMemory(to: Float.self))
+      },
+    ])
   }
 }
