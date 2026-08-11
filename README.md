@@ -2,7 +2,7 @@
 
 seeV is a macOS command line wrapper around the [Apple Vision framework](https://developer.apple.com/documentation/vision). Its goal is to unlock the functionality of the framework for use in shell scripts and other command line tools. seeV is written in Swift and requires macOS 15 or later.
 
-Most seeV operations have no runtime dependencies or network requirements because Vision.framework ships with macOS. The `nsfw` image-moderation command additionally requires [Ollama](https://ollama.com/) and an installed image-capable [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it) model.
+Most seeV operations have no runtime dependencies or network requirements because Vision.framework ships with macOS. The `nsfw` command and the NSFW phase of `all` additionally require [Ollama](https://ollama.com/) and an installed image-capable [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it) model. The `most` command never uses Ollama.
 
 ## Supported Operations
 
@@ -49,7 +49,6 @@ seev humans input.jpg -o output.png
 seev poses input.jpg -o output.png
 ```
 
-* Requires macOS 11 or later
 * Results are output in JSON and include the joints with x/y coordinates and confidence
 * Joint locations and limb connections are drawn to the output image when `-o` is provided
 
@@ -65,16 +64,21 @@ seev text input.jpg -o output.png
 * Red bounding boxes can be drawn around each phrase
 * Custom words to identify can be provided as a command line argument
 
+### Image Classification
+
+```sh
+seev classify input.jpg --minimum-confidence 0.4
+```
+
+* Returns identifiers from Apple's image classifier with their confidence levels
+* Specific identifiers can be included with `--include-identifiers`, even below the confidence threshold
+
 ### Embeddings
 
 ![Embeddings demo](assets/demos/embeddings.png)
 
 ```sh
 seev embeddings input.jpg
-```
-
-```sh
-seev distance input.jpg comparison.png
 ```
 
 * Embeddings are provided as a JSON object and include an array of floating point numbers
@@ -114,6 +118,15 @@ The `quality` command uses Apple Vision to score the aesthetic quality of an ima
 * `isUtility` identifies useful images that may not have memorable or exciting content.
 * Scores are most useful for ranking images or video frames rather than as a universal pass/fail threshold.
 
+### SHA-1 Hashing
+
+```sh
+seev sha1 input.jpg
+```
+
+* Returns a SHA-1 hash of the input file as JSON
+* The hash can be used to identify exact duplicate files; it does not measure visual similarity
+
 ### Image Moderation
 
 `seev nsfw` classifies images as NSFW using ShieldGemma 2 through Ollama. Its policy covers nudity, visible intimate body parts, and erotic presentation. It does not perform text moderation. Images remain on the local machine when using the default local Ollama endpoint.
@@ -137,11 +150,21 @@ ShieldGemma is a policy classifier: for each image and policy it answers `Yes` o
 
 #### Ollama setup
 
-Install and start Ollama, then download the image-capable ShieldGemma 2 model:
+Install Ollama:
 
 ```sh
 brew install ollama
+```
+
+Start Ollama in one terminal:
+
+```sh
 ollama serve
+```
+
+Then download the image-capable ShieldGemma 2 model from another terminal:
+
+```sh
 ollama pull hf.co/infil00p/shieldgemma-2-4b-it-GGUF:Q4_K_M
 ```
 
@@ -153,7 +176,7 @@ The command always uses the ShieldGemma model above. The Ollama endpoint default
 seev nsfw input.jpg --ollama-host http://127.0.0.1:11434
 ```
 
-When a non-local Ollama endpoint is configured, the image is sent to that endpoint. The command fails with a nonzero exit status when Ollama is unavailable, the fixed ShieldGemma model is not installed, or the model returns anything other than an unambiguous `Yes` or `No`.
+When a non-local Ollama endpoint is configured, the image is sent to that endpoint. On failure, `seev nsfw` writes a human-readable error to stderr, produces no JSON, and exits with a nonzero status. Errors are grouped into three categories: the fixed model is not installed, Ollama is unavailable, or an unknown classification error occurred.
 
 The GGUF package above is a [third-party Ollama-compatible conversion](https://huggingface.co/infil00p/shieldgemma-2-4b-it-GGUF) of Google's [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it), not an Ollama model published by Google.
 
@@ -163,9 +186,9 @@ The GGUF package above is a [third-party Ollama-compatible conversion](https://h
 seev all input.jpg
 ```
 
-The `all` command runs faces, humans, text, poses, classification, embeddings, and SHA-1 independently. A failed operation does not discard successful results; failures are returned in an `errors` object keyed by operation. The command exits with a failure status only when every operation fails.
+The `all` command runs faces, humans, text, poses, classification, embeddings, SHA-1, and NSFW classification independently. It accepts the same `--ollama-host` option as `nsfw`. A failed operation does not discard successful results; failures are returned in an `errors` object keyed by operation. For example, an unavailable Ollama service produces an `errors.nsfw` message while the Vision results are still returned. The command exits with a failure status only when every operation fails.
 
-Use `most` for the same combined analysis without full-image or per-face embeddings. This keeps the JSON output substantially smaller:
+Use `most` for combined analysis without full-image embeddings, per-face embeddings, or NSFW classification. This keeps the JSON output substantially smaller and does not require Ollama:
 
 ```sh
 seev most input.jpg
@@ -175,7 +198,7 @@ seev most input.jpg
 
 ### Release
 
-You can download the latest M1 build from the [Releases]( https://github.com/Nexuist/seeV/releases) page.
+You can download the latest M1 build from the [Releases](https://github.com/Nexuist/seeV/releases) page.
 
 ### Build from Source
 

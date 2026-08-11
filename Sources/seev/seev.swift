@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-let VERSION = "2.2.0"
+let VERSION = "2.3.0"
 
 struct Options: ParsableArguments {
   @Argument(help: "The filepath of the input image")

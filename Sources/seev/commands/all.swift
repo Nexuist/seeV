@@ -3,7 +3,7 @@ import Foundation
 import Vision
 
 @available(macOS 12.0, *)
-struct All: ParsableCommand {
+struct All: AsyncParsableCommand {
   static var configuration: CommandConfiguration = CommandConfiguration(
     abstract: "Performs all operations on an image and returns the results as JSON.",
     discussion:
@@ -12,13 +12,27 @@ struct All: ParsableCommand {
 
   @OptionGroup() var args: Options
 
-  mutating func run() throws {
-    try runCombinedAnalysis(input: args.input, includeEmbeddings: true)
+  @Option(
+    name: [.customLong("ollama-host")],
+    help: "Base URL of the Ollama service used for NSFW classification."
+  )
+  var ollamaHost = ShieldGemmaNSFWClassifier.defaultHost
+
+  mutating func run() async throws {
+    try await runCombinedAnalysis(
+      input: args.input,
+      includeEmbeddings: true,
+      ollamaHost: ollamaHost
+    )
   }
 }
 
 @available(macOS 12.0, *)
-func runCombinedAnalysis(input: String, includeEmbeddings: Bool) throws {
+func runCombinedAnalysis(
+  input: String,
+  includeEmbeddings: Bool,
+  ollamaHost: String?
+) async throws {
   var result: [String: Any] = ["input": input]
   var errors: [String: String] = [:]
   var successCount = 0
@@ -206,6 +220,21 @@ func runCombinedAnalysis(input: String, includeEmbeddings: Bool) throws {
     })
   {
     result["sha1"] = sha1
+  }
+
+  if let ollamaHost {
+    do {
+      let classifier = try ShieldGemmaNSFWClassifier(host: ollamaHost)
+      let violation = try await classifier.isNSFW(imageAt: inputImagePathToURL(input))
+      result["nsfw"] = [
+        "model": ShieldGemmaNSFWClassifier.model,
+        "policy": ShieldGemmaNSFWClassifier.policyName,
+        "violation": violation,
+      ]
+      successCount += 1
+    } catch {
+      errors["nsfw"] = error.localizedDescription
+    }
   }
 
   guard successCount > 0 else {
