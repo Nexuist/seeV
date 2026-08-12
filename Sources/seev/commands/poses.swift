@@ -1,80 +1,68 @@
 import ArgumentParser
-import Foundation
+import CoreGraphics
 import Vision
 
-@available(macOS 11.0, *)
-struct Poses: ParsableCommand {
-  static var configuration: CommandConfiguration = CommandConfiguration(
-    abstract: "Detects the poses of humans in an image.",
+@available(macOS 15.0, *)
+struct Poses: AsyncParsableCommand {
+  static var configuration = CommandConfiguration(
+    abstract: "Detects human poses in an image or representative video frames.",
     discussion: "The JSON output."
   )
 
-  @OptionGroup() var args: Options
+  @OptionGroup var args: MediaOutputOptions
 
-  mutating func run() {
-    do {
-      let request = VNDetectHumanBodyPoseRequest()
-      let poses: [VNHumanBodyPoseObservation] =
-        try performRequest(
-          request: request, inputImagePath: args.input)
-      let posesDict: [String: Any] = [
-        "input": args.input,
-        "poses": poses.map { pose in
-          [
-            "joints": pose.availableJointNames.map {
-              [
-                "name": $0.rawValue,
-                "x": try! pose.recognizedPoint($0).location.x,
-                "y": try! pose.recognizedPoint($0).location.y,
-                "confidence": try! pose.recognizedPoint($0).confidence,
-              ]
-            }
-          ]
-        },
-      ]
-      printDict(posesDict)
-      let points: [CGPoint] = poses.flatMap { pose in
-        pose.availableJointNames.map {
-          try! pose.recognizedPoint($0).location
-        }
-      }
-      var lines: [(CGPoint, CGPoint)] = []
-      for pose in poses {
-        func addPair(
-          _ A: VNHumanBodyPoseObservation.JointName, _ B: VNHumanBodyPoseObservation.JointName
-        ) {
-          if pose.availableJointNames.contains(A) && pose.availableJointNames.contains(B) {
-            let pointA = try! pose.recognizedPoint(A)
-            let pointB = try! pose.recognizedPoint(B)
-            if pointA.confidence < 0.5 || pointB.confidence < 0.5 {
-              return
-            }
-            lines.append(
-              (
-                pointA.location,
-                pointB.location
-              ))
-          }
-        }
-        addPair(.neck, .root)
-        addPair(.leftShoulder, .rightShoulder)
-        addPair(.leftShoulder, .leftElbow)
-        addPair(.rightShoulder, .rightElbow)
-        addPair(.leftElbow, .leftWrist)
-        addPair(.rightElbow, .rightWrist)
-        addPair(.leftHip, .rightHip)
-        addPair(.leftHip, .leftKnee)
-        addPair(.rightHip, .rightKnee)
-        addPair(.leftKnee, .leftAnkle)
-        addPair(.rightKnee, .rightAnkle)
-      }
-      if args.output != nil {
-        draw(
-          inputImagePath: args.input, outputImagePath: args.output!, points: points,
-          boxes: [], lines: lines)
-      }
-    } catch {
-      print("Error: \(error)")
+  mutating func run() async throws {
+    try args.validateImageOutput()
+
+    let result = try await analyzeMedia(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      operationName: "poses",
+      analysis: poseAnalysis
+    )
+    printDict(result.output)
+
+    if let poses = result.imageArtifact, let output = args.output {
+      draw(
+        inputImagePath: args.input,
+        outputImagePath: output,
+        points: poses.flatMap(posePoints),
+        boxes: [],
+        lines: poses.flatMap(poseLines)
+      )
     }
+  }
+}
+
+private func posePoints(_ pose: VNHumanBodyPoseObservation) -> [CGPoint] {
+  pose.availableJointNames.compactMap { jointName in
+    try? pose.recognizedPoint(jointName).location
+  }
+}
+
+private func poseLines(_ pose: VNHumanBodyPoseObservation) -> [(CGPoint, CGPoint)] {
+  let pairs: [(VNHumanBodyPoseObservation.JointName, VNHumanBodyPoseObservation.JointName)] = [
+    (.neck, .root),
+    (.leftShoulder, .rightShoulder),
+    (.leftShoulder, .leftElbow),
+    (.rightShoulder, .rightElbow),
+    (.leftElbow, .leftWrist),
+    (.rightElbow, .rightWrist),
+    (.leftHip, .rightHip),
+    (.leftHip, .leftKnee),
+    (.rightHip, .rightKnee),
+    (.leftKnee, .leftAnkle),
+    (.rightKnee, .rightAnkle),
+  ]
+  return pairs.compactMap { firstJoint, secondJoint in
+    guard
+      let pointA = try? pose.recognizedPoint(firstJoint),
+      let pointB = try? pose.recognizedPoint(secondJoint),
+      pointA.confidence >= 0.5,
+      pointB.confidence >= 0.5
+    else {
+      return nil
+    }
+    return (pointA.location, pointB.location)
   }
 }

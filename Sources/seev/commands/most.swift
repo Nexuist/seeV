@@ -1,17 +1,21 @@
 import ArgumentParser
 
-@available(macOS 12.0, *)
+@available(macOS 15.0, *)
 struct Most: AsyncParsableCommand {
   static var configuration = CommandConfiguration(
-    abstract: "Performs combined image analysis without embeddings or NSFW classification.",
+    abstract:
+      "Performs combined analysis on an image or representative video frames without embeddings or NSFW classification.",
     discussion:
-      "Runs faces, humans, text, poses, classification, and SHA-1 without requiring Ollama."
+      "Runs faces, humans, text, poses, classification, quality, and SHA-1 without requiring Ollama."
   )
 
-  @Argument(help: "The filepath of the input image")
-  var input: String
+  @OptionGroup var args: MediaOptions
 
   mutating func run() async throws {
-    try await runCombinedAnalysis(input: input, includeEmbeddings: false, ollamaHost: nil)
+    try await runCombinedMediaAnalysis(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      includeEmbeddings: false
+    )
   }
 }

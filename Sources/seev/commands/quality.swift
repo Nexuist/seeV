@@ -1,28 +1,20 @@
 import ArgumentParser
-import Vision
 
 @available(macOS 15.0, *)
-struct Quality: ParsableCommand {
+struct Quality: AsyncParsableCommand {
   static var configuration = CommandConfiguration(
-    abstract: "Scores the aesthetic quality of an image."
+    abstract: "Scores the aesthetic quality of an image or representative video frames."
   )
 
-  @Argument(help: "The filepath of the input image")
-  var input: String
+  @OptionGroup var args: MediaOptions
 
-  mutating func run() throws {
-    let observations: [VNImageAestheticsScoresObservation] = try performRequest(
-      request: VNCalculateImageAestheticsScoresRequest(),
-      inputImagePath: input
+  mutating func run() async throws {
+    let result = try await analyzeMedia(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      operationName: "quality",
+      analysis: qualityAnalysis
     )
-    guard let quality = observations.first else {
-      throw ValidationError("Vision did not return an image quality score.")
-    }
-
-    printDict([
-      "input": input,
-      "overallScore": quality.overallScore,
-      "isUtility": quality.isUtility,
-    ])
+    printDict(result.output)
   }
 }

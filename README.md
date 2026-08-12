@@ -1,6 +1,6 @@
 # seeV
 
-seeV is a macOS command line wrapper around the [Apple Vision framework](https://developer.apple.com/documentation/vision). Its goal is to unlock the functionality of the framework for use in shell scripts and other command line tools. seeV is written in Swift and requires macOS 15 or later.
+seeV is a macOS command line wrapper around the [Apple Vision framework](https://developer.apple.com/documentation/vision). Its goal is to unlock the functionality of the framework for images and videos in shell scripts and other command line tools. seeV is written in Swift and requires macOS 15 or later.
 
 Most seeV operations have no runtime dependencies or network requirements because Vision.framework ships with macOS. The `nsfw` command and the NSFW phase of `all` additionally require [Ollama](https://ollama.com/) and an installed image-capable [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it) model. The `most` command never uses Ollama.
 
@@ -104,7 +104,7 @@ seev distance input.jpg comparison.png
 seev quality input.jpg
 ```
 
-The `quality` command uses Apple Vision to score the aesthetic quality of an image:
+The `quality` command uses Apple Vision to score the aesthetic quality of an image or representative video frames:
 
 ```json
 {
@@ -138,12 +138,7 @@ seev nsfw input.jpg
 The result is a boolean policy decision:
 
 ```json
-{
-  "input": "input.jpg",
-  "model": "hf.co/infil00p/shieldgemma-2-4b-it-GGUF:Q4_K_M",
-  "policy": "nsfw",
-  "violation": false
-}
+false
 ```
 
 ShieldGemma is a policy classifier: for each image and policy it answers `Yes` or `No`. It does not return bounding boxes or identify individual body parts. Applications should treat the result as one moderation signal, use a review path for uncertain or high-impact decisions, and evaluate the model against examples that match their own policy.
@@ -186,13 +181,50 @@ The GGUF package above is a [third-party Ollama-compatible conversion](https://h
 seev all input.jpg
 ```
 
-The `all` command runs faces, humans, text, poses, classification, embeddings, SHA-1, and NSFW classification independently. It accepts the same `--ollama-host` option as `nsfw`. A failed operation does not discard successful results; failures are returned in an `errors` object keyed by operation. For example, an unavailable Ollama service produces an `errors.nsfw` message while the Vision results are still returned. The command exits with a failure status only when every operation fails.
+The `all` command runs faces, humans, text, poses, classification, quality, embeddings, SHA-1, and NSFW classification independently. It accepts the same `--ollama-host` option as `nsfw`. A successful NSFW result is returned as a boolean. A failed operation does not discard successful results; failures are returned in an `errors` object keyed by operation. For example, an unavailable Ollama service produces an `errors.nsfw` message while the Vision results are still returned. The command exits with a failure status only when every operation fails.
 
 Use `most` for combined analysis without full-image embeddings, per-face embeddings, or NSFW classification. This keeps the JSON output substantially smaller and does not require Ollama:
 
 ```sh
 seev most input.jpg
 ```
+
+## Video Input
+
+Frame-based commands automatically recognize video files. There is no separate video command:
+
+```sh
+seev faces input.mp4
+seev quality input.mp4 --max-frames 5
+seev nsfw input.mp4
+seev most input.mp4
+```
+
+`faces`, `humans`, `text`, `embeddings`, `classify`, `poses`, `quality`, `nsfw`, `all`, and `most` accept video input. The only video-specific option is `--max-frames`, which defaults to `10` and sets an upper bound on the number of representative frames analyzed.
+
+Video results contain the duration and the actual timestamp of each decoded frame:
+
+```json
+{
+  "input": "input.mp4",
+  "durationSeconds": 93.4,
+  "frames": [
+    {
+      "timestampSeconds": 4.67,
+      "nsfw": false,
+      "faces": []
+    }
+  ]
+}
+```
+
+Frames are sampled from the center of evenly spaced time ranges for broad temporal coverage, avoiding the exact beginning and end of the video. seeV asks AVFoundation for nearby keyframes and scales them to a maximum dimension of 1280 pixels for faster analysis. If a frame cannot be decoded, seeV makes one nearby fallback attempt. The same face, text, or other result remains present in every sampled frame where it is detected; results are not deduplicated across frames.
+
+For images, standalone `nsfw` returns a JSON boolean. For videos, each frame contains an `nsfw` boolean alongside its timestamp. Per-operation failures remain under the frame's `errors` object.
+
+`sha1` hashes a video as one file. `distance` and subject extraction remain image-only. Annotated or cropped image output options such as `-o` and `--cropped` are not supported for video input.
+
+Representative-frame sampling is a fast heuristic, not exhaustive video moderation. Content that appears only between sampled frames may not be detected; increase `--max-frames` when greater coverage is required.
 
 ## Installation
 

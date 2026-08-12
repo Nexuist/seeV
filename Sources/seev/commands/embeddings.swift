@@ -1,30 +1,21 @@
 import ArgumentParser
-import Foundation
-import Vision
 
-@available(macOS 12.0, *)
-struct Embeddings: ParsableCommand {
-
+@available(macOS 15.0, *)
+struct Embeddings: AsyncParsableCommand {
   static var configuration = CommandConfiguration(
-    abstract: "Extracts embeddings from an image and returns the results as JSON.",
-    discussion: "The JSON output includes the embeddings of the input image."
+    abstract: "Extracts embeddings from an image or representative video frames.",
+    discussion: "The JSON output includes the embeddings of the analyzed input."
   )
 
-  @OptionGroup() var args: Options
+  @OptionGroup var args: MediaOptions
 
-  mutating func run() throws {
-    let embeddings: [VNFeaturePrintObservation] = try performRequest(
-      request: VNGenerateImageFeaturePrintRequest(),
-      inputImagePath: args.input
+  mutating func run() async throws {
+    let result = try await analyzeMedia(
+      input: args.input,
+      maxFrames: args.maxFrames,
+      operationName: "embedding",
+      analysis: embeddingAnalysis
     )
-    guard let embedding = embeddings.first else {
-      throw SeeVError.noFeaturePrintFound
-    }
-    printDict([
-      "input": args.input,
-      "embedding": embedding.data.withUnsafeBytes {
-        Array($0.bindMemory(to: Float.self))
-      },
-    ])
+    printDict(result.output)
   }
 }
