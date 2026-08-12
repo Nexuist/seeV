@@ -2,7 +2,7 @@
 
 seeV is a macOS command line wrapper around the [Apple Vision framework](https://developer.apple.com/documentation/vision). Its goal is to unlock the functionality of the framework for images and videos in shell scripts and other command line tools. seeV is written in Swift and requires macOS 15 or later.
 
-Most seeV operations have no runtime dependencies or network requirements because Vision.framework ships with macOS. The `nsfw` command and the NSFW phase of `all` additionally require [Ollama](https://ollama.com/) and an installed image-capable [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it) model. The `most` command never uses Ollama.
+Most seeV operations have no runtime dependencies or network requirements because Vision.framework ships with macOS. Video formats that AVFoundation cannot decode, including WebM on macOS, require [ffmpeg](https://ffmpeg.org/). The `nsfw` command and the NSFW phase of `all` additionally require [Ollama](https://ollama.com/) and an installed image-capable [ShieldGemma 2](https://huggingface.co/google/shieldgemma-2-4b-it) model. The `most` command never uses Ollama.
 
 ## Supported Operations
 
@@ -202,7 +202,7 @@ seev most input.mp4
 
 `faces`, `humans`, `text`, `embeddings`, `classify`, `poses`, `quality`, `nsfw`, `all`, and `most` accept video input. The only video-specific option is `--max-frames`, which defaults to `10` and sets an upper bound on the number of representative frames analyzed.
 
-Video results contain the duration and the actual timestamp of each decoded frame:
+Video results contain the duration and timestamp associated with each decoded frame:
 
 ```json
 {
@@ -218,7 +218,15 @@ Video results contain the duration and the actual timestamp of each decoded fram
 }
 ```
 
-Frames are sampled from the center of evenly spaced time ranges for broad temporal coverage, avoiding the exact beginning and end of the video. seeV asks AVFoundation for nearby keyframes and scales them to a maximum dimension of 1280 pixels for faster analysis. If a frame cannot be decoded, seeV makes one nearby fallback attempt. The same face, text, or other result remains present in every sampled frame where it is detected; results are not deduplicated across frames.
+Frames are sampled from the center of evenly spaced time ranges for broad temporal coverage, avoiding the exact beginning and end of the video. seeV first uses AVFoundation to decode nearby keyframes and scales them to a maximum dimension of 1280 pixels for faster analysis. If an AVFoundation frame cannot be decoded, seeV makes one nearby fallback attempt.
+
+When AVFoundation cannot open a video format, seeV falls back to `ffprobe` for duration and `ffmpeg` for representative-frame extraction. The fallback writes at most `--max-frames` temporary JPEGs, loads them into memory, and removes the temporary directory before returning the frames for analysis. Install both tools with:
+
+```sh
+brew install ffmpeg
+```
+
+The same face, text, or other result remains present in every sampled frame where it is detected; results are not deduplicated across frames.
 
 For images, standalone `nsfw` returns a JSON boolean. For videos, each frame contains an `nsfw` boolean alongside its timestamp. Per-operation failures remain under the frame's `errors` object.
 

@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-let VERSION = "2.4.0"
+let VERSION = "2.5.0"
 
 private func positiveInteger(_ argument: String) throws -> Int {
   guard let value = Int(argument), value > 0 else {

@@ -95,6 +95,28 @@ func isVideoInput(_ input: String) -> Bool {
 
 @available(macOS 13.0, *)
 func extractVideoFrames(input: String, maxFrames: Int) async throws -> VideoFrames {
+  do {
+    return try await extractVideoFramesWithAVFoundation(input: input, maxFrames: maxFrames)
+  } catch {
+    do {
+      return try FFmpegFrameExtractor().extract(input: input, maxFrames: maxFrames)
+    } catch FFmpegFrameExtractionError.unavailable {
+      throw VideoInputError.invalidVideo(
+        "AVFoundation could not open the video, and ffmpeg is unavailable. Install it with 'brew install ffmpeg'."
+      )
+    } catch {
+      throw VideoInputError.invalidVideo(
+        "AVFoundation could not open the video, and the ffmpeg fallback failed: \(error.localizedDescription)"
+      )
+    }
+  }
+}
+
+@available(macOS 13.0, *)
+private func extractVideoFramesWithAVFoundation(
+  input: String,
+  maxFrames: Int
+) async throws -> VideoFrames {
   let asset = AVURLAsset(url: inputImagePathToURL(input))
   let duration: CMTime
   let tracks: [AVAssetTrack]
